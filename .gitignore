@@ -1,6 +1,13 @@
 node_modules
 .env*
+!.env.example
 .eve
+
+# internal planning, not shipped in the template
+IMPLEMENTATION_PLAN.md
+
+# sanity functions local build output
+.build
 .vercel
 .workflow-data
 .next

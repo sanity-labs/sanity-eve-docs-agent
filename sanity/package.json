@@ -1,0 +1,11 @@
+{
+  "name": "docs-feedback-functions",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@sanity/functions": "latest"
+  },
+  "devDependencies": {
+    "@sanity/blueprints": "latest"
+  }
+}
