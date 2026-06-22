@@ -1,5 +1,5 @@
 {
-  "name": "eve-docs-scaffold",
+  "name": "sanity-eve-docs-agent",
   "version": "0.0.0",
   "type": "module",
   "imports": {

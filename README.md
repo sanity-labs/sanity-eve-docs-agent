@@ -47,6 +47,9 @@ surface is deliberately small:
 - **Going further:** scope the Sanity token so its role can't publish at all (defense in depth),
   and re-enable `web_search` only if you want the agent to fact-check (delete
   `agent/tools/web_search.ts`).
+- **Provenance for free:** name the token after the agent (e.g. "docs-feedback agent"). Every
+  draft it stages is then attributed to that identity in Sanity's document history — no in-body
+  marker needed.
 
 ## Content model it expects
 
@@ -136,10 +139,17 @@ No deploy needed — both halves run on your machine:
 
 ## Triggers
 
-- **Event (primary):** deploy the Sanity Function — `cd sanity && npx sanity@latest blueprints deploy`.
-  It fires on new `feedback`, passes the feedback `_id`, and POSTs to your deployed agent's
+- **Event (primary):** deploy the Sanity Function, then give it the agent's URL and the shared
+  secret (env vars live per-function, set after the first deploy):
+  ```bash
+  cd sanity
+  npx sanity@latest blueprints deploy
+  npx sanity functions env add on-feedback EVE_AGENT_URL https://your-agent.vercel.app
+  npx sanity functions env add on-feedback EVE_TRIGGER_SECRET "<the same secret as the agent>"
+  ```
+  It fires on new `feedback`, passes the feedback `_id`, and POSTs to the agent's
   `/eve/v1/session` with a `Bearer ${EVE_TRIGGER_SECRET}` header — failing (so Sanity retries)
-  if the agent rejects it. Set `EVE_AGENT_URL` + `EVE_TRIGGER_SECRET` on the function.
+  if the agent rejects it.
 - **Cron (backstop):** `agent/schedules/weekly-feedback-sweep.ts` sweeps unaddressed feedback
   weekly. (`eve dev` never fires schedules; a deployed `eve start` does.)
 
