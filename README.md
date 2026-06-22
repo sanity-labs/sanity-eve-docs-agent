@@ -1,4 +1,4 @@
-# Docs-feedback agent — Sanity × eve
+# Docs-feedback agent: Sanity × eve
 
 An autonomous content-operations agent. When a reader leaves feedback on a documentation
 article, the agent reads the article, composes a clarifying fix and stages it as a **draft**
@@ -7,7 +7,7 @@ Studio and publishes. A weekly sweep catches anything the event trigger missed.
 
 Built on [eve](https://eve.dev) (durable runtime). eve's own model does the reasoning; the
 write is a deterministic [`@sanity/client`](https://www.sanity.io/docs/js-client) document
-action against the exact article — so the right doc gets the edit, every time.
+action against the exact article, so the right doc gets the edit, every time.
 
 ## How it works
 
@@ -39,7 +39,7 @@ surface is deliberately small:
   `write_file`, `glob`, `grep`, `web_fetch`, `web_search`) to every agent by default. This
   template disables all of them (`agent/tools/<name>.ts` exporting `disableTool()`). The agent's
   entire effect is its five authored tools: read feedback, read an article, stage a draft, mark
-  feedback handled, post to Slack. There is **no publish, no delete, no shell** — the worst a
+  feedback handled, post to Slack. There is **no publish, no delete, no shell**. The worst a
   malicious comment can do is produce a draft a human then reviews.
 - **Untrusted input stays data.** The Function passes only the feedback `_id`; the agent reads
   the comment via `read_feedback`, and `instructions.md` tells it to treat the comment as data,
@@ -48,13 +48,13 @@ surface is deliberately small:
   and re-enable `web_search` only if you want the agent to fact-check (delete
   `agent/tools/web_search.ts`).
 - **Provenance for free:** name the token after the agent (e.g. "docs-feedback agent"). Every
-  draft it stages is then attributed to that identity in Sanity's document history — no in-body
-  marker needed.
+  draft it stages is then attributed to that identity in Sanity's document history, with no
+  in-body marker needed.
 
 ## Content model it expects
 
 The agent assumes two document types. Adapt the field names in `agent/lib` + the tools if yours
-differ — it's plain GROQ and one patch, no configuration layer:
+differ. It's plain GROQ and one patch, no configuration layer:
 
 ```ts
 // article: the documentation you're improving
@@ -97,7 +97,7 @@ agent/
   tools/mark_feedback_handled.ts # record outcome on the feedback (idempotency + trail)
   tools/find_recent_feedback.ts  # GROQ read of unhandled feedback (no AI credits)
   tools/post_to_slack.ts         # actionable Slack notice (incoming webhook)
-  tools/{bash,read_file,write_file,glob,grep,web_fetch,web_search}.ts  # disableTool() — see Security model
+  tools/{bash,read_file,write_file,glob,grep,web_fetch,web_search}.ts  # disableTool(); see Security model
   schedules/weekly-feedback-sweep.ts
 sanity/
   sanity.blueprint.ts            # the Function trigger (deploy with the Sanity CLI)
@@ -117,11 +117,11 @@ sanity/
 
 ## Test it locally
 
-No deploy needed — both halves run on your machine:
+No deploy needed. Both halves run on your machine:
 
 1. **The agent:** `npm run dev` (eve dev TUI), or POST to its HTTP API with a feedback `_id`:
    ```bash
-   curl -X POST http://127.0.0.1:3000/eve/v1/session -H 'content-type: application/json' \
+   curl -X POST http://127.0.0.1:2000/eve/v1/session -H 'content-type: application/json' \
      -d '{"message":"New reader feedback to handle. Feedback document _id: \"<feedback-id>\"."}'
    ```
 2. **The function → agent chain:** with `eve dev` running, point the function at the local
@@ -129,12 +129,12 @@ No deploy needed — both halves run on your machine:
    localhost):
    ```bash
    cd sanity
-   EVE_AGENT_URL=http://127.0.0.1:3000 npx sanity@latest functions test on-feedback \
+   EVE_AGENT_URL=http://127.0.0.1:2000 npx sanity@latest functions test on-feedback \
      --document-id <a feedback _id> --project-id <projectId> --dataset <dataset>
    # or an interactive playground:
-   EVE_AGENT_URL=http://127.0.0.1:3000 npx sanity@latest functions dev
+   EVE_AGENT_URL=http://127.0.0.1:2000 npx sanity@latest functions dev
    ```
-   `context.local` is `true` during local tests — use it to guard real writes if you extend
+   `context.local` is `true` during local tests. Use it to guard real writes if you extend
    the function to mutate content directly.
 
 ## Triggers
@@ -148,7 +148,7 @@ No deploy needed — both halves run on your machine:
   npx sanity functions env add on-feedback EVE_TRIGGER_SECRET "<the same secret as the agent>"
   ```
   It fires on new `feedback`, passes the feedback `_id`, and POSTs to the agent's
-  `/eve/v1/session` with a `Bearer ${EVE_TRIGGER_SECRET}` header — failing (so Sanity retries)
+  `/eve/v1/session` with a `Bearer ${EVE_TRIGGER_SECRET}` header, failing (so Sanity retries)
   if the agent rejects it.
 - **Cron (backstop):** `agent/schedules/weekly-feedback-sweep.ts` sweeps unaddressed feedback
   weekly. (`eve dev` never fires schedules; a deployed `eve start` does.)
@@ -163,7 +163,7 @@ eve's [auth & route protection](https://eve.dev/docs/guides/auth-and-route-prote
 
 ## Extend
 
-- **Richer context:** give the agent related content to reason over. Cheapest first — GROQ
+- **Richer context:** give the agent related content to reason over. Cheapest first: GROQ
   references (`*[references($id)]`), then keyword `score()`/`text::match`, then
   [Sanity Context](https://www.sanity.io/docs/ai/sanity-context) for schema-aware semantic
   search. See the comment in `tools/read_article.ts`.
@@ -173,4 +173,4 @@ eve's [auth & route protection](https://eve.dev/docs/guides/auth-and-route-prote
 - **More surfaces:** add other eve channels (Discord, Linear) for notices.
 - **Slack app instead of a webhook:** the template posts via an incoming webhook (no install,
   no OAuth). A full Slack app adds interactive buttons and drops the "external link" warning
-  Slack shows on webhook buttons — worth it for a team-wide rollout, overkill to start.
+  Slack shows on webhook buttons. Worth it for a team-wide rollout, overkill to start.
