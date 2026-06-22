@@ -9,7 +9,8 @@ export default defineBlueprint({
       event: {
         on: ["create"],
         filter: '_type == "feedback" && defined(article) && defined(comment)',
-        projection: '{ _id, comment, rating, "articleId": article._ref }',
+        // The agent reads the feedback itself; the trigger only needs to identify it.
+        projection: "{ _id }",
       },
     }),
   ],

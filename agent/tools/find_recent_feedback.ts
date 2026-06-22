@@ -15,7 +15,7 @@ export default defineTool({
     const items = await client.fetch<
       Array<{ _id: string; comment?: string; rating?: number; articleId?: string }>
     >(
-      `*[_type == "feedback" && _createdAt > $since && !done && defined(article)]{
+      `*[_type == "feedback" && _createdAt > $since && !defined(handledAt) && defined(article)]{
         _id, comment, rating, "articleId": article._ref
       }`,
       { since },
