@@ -6,7 +6,7 @@ const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}
 export default defineTool({
   description:
     "Post a rich, actionable review notice to Slack: the article, the reader feedback, what " +
-    "changed, and a button that opens the content release in Sanity Studio.",
+    "changed, and a button that opens the draft in Sanity Studio.",
   inputSchema: z.object({
     articleTitle: z.string().describe("Title of the article that was revised"),
     feedback: z.string().describe("The reader feedback, briefly"),
@@ -14,7 +14,7 @@ export default defineTool({
     reviewUrl: z
       .string()
       .optional()
-      .describe("URL that opens the content release in Studio (from revise_article)"),
+      .describe("URL that opens the draft in Studio (from stage_article_edit)"),
   }),
   async execute({ articleTitle, feedback, summary, reviewUrl }) {
     const url = process.env.SLACK_WEBHOOK_URL;
@@ -46,7 +46,7 @@ export default defineTool({
         elements: [
           {
             type: "button",
-            text: { type: "plain_text", text: "Review release in Studio", emoji: true },
+            text: { type: "plain_text", text: "Review draft in Studio", emoji: true },
             url: reviewUrl,
             style: "primary",
           },
@@ -59,7 +59,7 @@ export default defineTool({
       elements: [
         {
           type: "mrkdwn",
-          text: "Proposed by an eve agent · staged in a content release, never auto-published",
+          text: "Proposed by an eve agent · staged as a draft, never auto-published",
         },
       ],
     });

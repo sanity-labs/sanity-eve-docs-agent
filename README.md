@@ -1,13 +1,13 @@
 # Docs-feedback agent — Sanity × eve
 
 An autonomous content-operations agent. When a reader leaves feedback on a documentation
-article, the agent reads the article, drafts an improved version (as a **draft**, never
-published), and posts an actionable Slack notice. An editor reviews the draft in Sanity
+article, the agent reads the article, composes a clarifying fix and stages it as a **draft**
+(never published), and posts an actionable Slack notice. An editor reviews the draft in Sanity
 Studio and publishes. A weekly sweep catches anything the event trigger missed.
 
-Built on [eve](https://eve.dev) (durable runtime) with the Sanity
-[Content Agent](https://www.sanity.io/docs/apis-and-sdks/content-agent-api)
-(`content-agent`) as the read + write content brain.
+Built on [eve](https://eve.dev) (durable runtime). eve's own model does the reasoning; the
+write is a deterministic [`@sanity/client`](https://www.sanity.io/docs/js-client) document
+action against the exact article — so the right doc gets the edit, every time.
 
 ## How it works
 
@@ -16,14 +16,16 @@ Reader leaves feedback
    │  (Sanity Function, on create)        (eve cron, weekly)
    ▼                                            │
 eve agent ──────────────────────────────────────┘
-   ├─ revise_article   → content-agent reads the article + drafts a fix (draft only)
+   ├─ read_article        → fetch the article body (plain GROQ, no AI credits)
+   ├─ stage_article_edit  → insert the agent's note into the article's DRAFT (edit action)
    ├─ find_recent_feedback → GROQ list of unaddressed feedback (cron sweep)
-   └─ post_to_slack    → "Doc X got feedback; draft ready to review"
+   └─ post_to_slack       → "Doc X got feedback; draft ready to review"
 Editor opens the draft in Studio → approves & publishes   (human-in-the-loop)
 ```
 
-content-agent writes to **drafts only**, so the editor's review is the approval gate. No
-content is ever published without a human.
+The agent writes to **drafts only** (via the Sanity document Actions API, which creates the
+draft from the published version), so the editor's review is the approval gate. No content is
+ever published without a human.
 
 ## Project layout
 
@@ -31,7 +33,9 @@ content is ever published without a human.
 agent/
   agent.ts                       # eve orchestrator model
   instructions.md                # the ops policy (propose, never publish)
-  tools/revise_article.ts        # content-agent: draft a fix from feedback
+  lib/sanity.ts                  # shared @sanity/client factory (one place to configure)
+  tools/read_article.ts          # GROQ read of the article body (no AI credits)
+  tools/stage_article_edit.ts    # stage the fix as a draft (Sanity edit action)
   tools/find_recent_feedback.ts  # GROQ read of unaddressed feedback (no AI credits)
   tools/post_to_slack.ts         # actionable Slack notice (incoming webhook)
   schedules/weekly-feedback-sweep.ts
@@ -42,9 +46,10 @@ sanity/
 
 ## Setup
 
-1. `cp .env.example .env.local` and fill it in. You need a Sanity org ID, a project
-   **Editor** token (Content Agent writes drafts), a deployed Studio, a Slack incoming
-   webhook, and a model credential (`AI_GATEWAY_API_KEY` or `npx eve link`).
+1. `cp .env.example .env.local` and fill it in. You need a project **Editor** token (reads
+   content, writes drafts), your project ID + dataset, a Slack incoming webhook, and a model
+   credential (`AI_GATEWAY_API_KEY` or `npx eve link`). Optionally set `SANITY_STUDIO_URL`
+   for the "Review draft in Studio" button.
 2. `npm install`
 3. `npm run dev` — the eve dev TUI. Try: *"Reader feedback on article &lt;id&gt;: 'the auth
    section is out of date'. Revise it and post a Slack notice."*
@@ -90,7 +95,14 @@ No deploy needed — both halves run on your machine:
 
 ## Extend
 
-- **Batch review:** scope writes to a Content Release (`perspectives: { write: '<releaseId>' }`
-  in `revise_article`) so a week of fixes lands in one reviewable release.
+- **Richer context:** give the agent related content to reason over. Cheapest first — GROQ
+  references (`*[references($id)]`), then keyword `score()`/`text::match`, then
+  [Sanity Context](https://www.sanity.io/docs/ai/sanity-context) for schema-aware semantic
+  search. See the comment in `tools/read_article.ts`.
+- **Batch review (Enterprise):** stage fixes into a Content Release instead of drafts, so a
+  week of fixes lands in one reviewable release.
 - **More checks:** broaden the agent's policy (broken links, missing alt text, SEO).
 - **More surfaces:** add other eve channels (Discord, Linear) for notices.
+- **Slack app instead of a webhook:** the template posts via an incoming webhook (no install,
+  no OAuth). A full Slack app adds interactive buttons and drops the "external link" warning
+  Slack shows on webhook buttons — worth it for a team-wide rollout, overkill to start.

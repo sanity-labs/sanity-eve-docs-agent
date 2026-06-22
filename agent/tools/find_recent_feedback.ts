@@ -1,6 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { createClient } from "@sanity/client";
+import { sanityClient } from "../lib/sanity.js";
 
 // A plain GROQ read (no AI credits) to list feedback the agent should act on.
 export default defineTool({
@@ -10,13 +10,7 @@ export default defineTool({
     days: z.number().default(7).describe("How many days back to look"),
   }),
   async execute({ days }) {
-    const client = createClient({
-      projectId: process.env.SANITY_STUDIO_PROJECT_ID!,
-      dataset: process.env.SANITY_STUDIO_DATASET ?? "production",
-      apiVersion: "2024-01-01",
-      token: process.env.SANITY_API_WRITE_TOKEN,
-      useCdn: false,
-    });
+    const client = sanityClient();
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     const items = await client.fetch<
       Array<{ _id: string; comment?: string; rating?: number; articleId?: string }>
