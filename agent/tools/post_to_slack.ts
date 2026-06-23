@@ -60,28 +60,14 @@ export default defineTool({
     // `text` is the notification/accessibility fallback for the rich blocks.
     const text = `Docs fix ready to review: ${articleTitle}`;
 
-    // For local development, set SLACK_WEBHOOK_URL: `eve dev` has no Vercel OIDC for Connect, so
-    // the tool posts via the webhook when it's present. In production it's unset, and Connect
-    // (below) brokers the Slack app's token.
-    const webhook = process.env.SLACK_WEBHOOK_URL;
-    if (webhook) {
-      const res = await fetch(webhook, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, blocks }),
-      });
-      if (!res.ok) throw new Error(`Slack webhook failed: ${res.status} ${await res.text()}`);
-      return { posted: true, via: "webhook" };
-    }
-
-    // Default: post via the Slack app that Vercel Connect provisions at deploy
-    // (`vercel connect create slack`). Connect brokers an app-scoped bot token at runtime,
-    // so there's no webhook URL or bot token to manage. Needs a target channel.
+    // Posts via the Slack app that Vercel Connect provisions (`vercel connect create slack`).
+    // Connect brokers an app-scoped bot token at runtime from the project's Vercel OIDC identity,
+    // so there's no token to store. Locally, run `vercel env pull` so eve dev has a VERCEL_OIDC_TOKEN.
     const connector = process.env.SLACK_CONNECTOR;
     const channel = process.env.SLACK_CHANNEL;
     if (!connector || !channel) {
       throw new Error(
-        "Set SLACK_CONNECTOR and SLACK_CHANNEL (or SLACK_WEBHOOK_URL for local dev). See .env.example.",
+        "Set SLACK_CONNECTOR and SLACK_CHANNEL. Create the Slack app with `vercel connect create slack`. See .env.example.",
       );
     }
     const botToken = await getToken(connector, { subject: { type: "app" } });
@@ -98,6 +84,6 @@ export default defineTool({
     if (!body.ok) {
       throw new Error(`Slack chat.postMessage failed: ${body.error ?? res.status}`);
     }
-    return { posted: true, via: "connect" };
+    return { posted: true };
   },
 });

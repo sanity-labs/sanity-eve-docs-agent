@@ -97,7 +97,7 @@ agent/
   tools/stage_article_edit.ts    # stage the fix as a draft (Sanity Agent Action: transform)
   tools/mark_feedback_handled.ts # record outcome on the feedback (idempotency + trail)
   tools/find_recent_feedback.ts  # GROQ read of unhandled feedback (no AI credits)
-  tools/post_to_slack.ts         # actionable Slack notice (incoming webhook)
+  tools/post_to_slack.ts         # actionable Slack notice (Slack app via Vercel Connect)
   tools/{bash,read_file,write_file,glob,grep,web_fetch,web_search}.ts  # disableTool(); see Security model
   schedules/weekly-feedback-sweep.ts
 sanity/
@@ -109,10 +109,10 @@ sanity/
 
 1. `cp .env.example .env.local` and fill it in. You need a project **Editor** token (reads
    content, writes drafts), your project ID + dataset, your deployed **schema id**
-   (`SANITY_SCHEMA_ID`, from `npx sanity schema list`, which Agent Actions need), Slack (a Vercel
-   Connect connector for production, or a webhook for local dev; see [Slack](#slack)), and a
-   model credential (`AI_GATEWAY_API_KEY` or `npx eve link`). For the "Review draft in Studio"
-   button, set `SANITY_ORG_ID` + `SANITY_STUDIO_APP_ID` (both in your Studio's `sanity.cli.ts`).
+   (`SANITY_SCHEMA_ID`, from `npx sanity schema list`, which Agent Actions need), a Vercel Connect
+   Slack connector (see [Slack](#slack)), and a model credential (`AI_GATEWAY_API_KEY` or
+   `npx eve link`). For the "Review draft in Studio" button, set `SANITY_ORG_ID` +
+   `SANITY_STUDIO_APP_ID` (both in your Studio's `sanity.cli.ts`).
 2. `npm install`
 3. Create a **`feedback` document** in Studio referencing an article (or seed one however you
    like), then `npm run dev` (the eve dev TUI) and give the agent its `_id`:
@@ -179,9 +179,9 @@ vercel connect create slack            # walks through installing the Slack app
 ```
 
 `post_to_slack` requests an app-scoped bot token from Connect at runtime and calls
-`chat.postMessage`. For **local dev**, Connect needs the project's Vercel OIDC identity, which
-`eve dev` doesn't have, so set `SLACK_WEBHOOK_URL` in `.env.local` and the tool posts through the
-webhook for local runs. Leave it blank in production.
+`chat.postMessage`. This works locally too: run `vercel env pull` so `eve dev` has a
+`VERCEL_OIDC_TOKEN` in `.env.local`, and Connect mints the bot token from it (that token is
+short-lived, so re-pull when it expires).
 
 ## Extend
 

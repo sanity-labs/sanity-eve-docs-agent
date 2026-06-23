@@ -10,7 +10,7 @@ This pattern adapts to other content operations too. You can apply it anywhere a
 - A [Sanity](https://www.sanity.io) project with a deployed Studio, an `article` type (with a Portable Text body) and a `feedback` type (shape below).
 - A Sanity API token with the **Editor** role: it reads content and writes drafts.
 - A Slack workspace where you can install an app. Vercel Connect sets up the Slack app for you
-  at deploy (step 7); for local development you can use an incoming webhook.
+  at deploy (step 7), and it works locally too (run `vercel env pull` first).
 - A model credential for eve: an `AI_GATEWAY_API_KEY`, or run `npx eve link`.
 
 ## How it works
@@ -95,7 +95,6 @@ SANITY_ORG_ID=oSyH1iET5                                # review button: org id +
 SANITY_STUDIO_APP_ID=your-studio-app-id                # the studio app id, added on `sanity deploy`
 SLACK_CONNECTOR=slack/your-agent                       # Slack app via Vercel Connect (set up in step 7)
 SLACK_CHANNEL=C0123456789                              # channel to post to (invite the app to it)
-# SLACK_WEBHOOK_URL=                                   # for local dev (eve dev has no Connect/OIDC)
 AI_GATEWAY_API_KEY=your-gateway-key                    # or run `npx eve link`
 EVE_TRIGGER_SECRET=a-long-random-string                # the Function authenticates with this
 ```
@@ -112,7 +111,7 @@ This opens the eve dev TUI. Create a `feedback` document in Studio that referenc
 
 > New reader feedback to handle. Feedback document _id: "&lt;feedback-id&gt;".
 
-You'll see the agent call `read_feedback`, `read_article`, `stage_article_edit`, `mark_feedback_handled`, then `post_to_slack`. Open the draft from the Slack button to review it. For local runs, Connect needs the project's Vercel OIDC identity, which `eve dev` doesn't have, so set `SLACK_WEBHOOK_URL` in `.env.local` and the tool posts through the webhook. To exercise the real trigger path on your machine, use Sanity's local function testing, pointing `EVE_AGENT_URL` at the address `eve dev` printed on boot (`http://127.0.0.1:2000` by default):
+You'll see the agent call `read_feedback`, `read_article`, `stage_article_edit`, `mark_feedback_handled`, then `post_to_slack`. Open the draft from the Slack button to review it. (Slack posting goes through Vercel Connect: the connector from step 7, plus `vercel env pull` for a local `VERCEL_OIDC_TOKEN`. The draft staging and feedback-handling work without it.) To exercise the real trigger path on your machine, use Sanity's local function testing, pointing `EVE_AGENT_URL` at the address `eve dev` printed on boot (`http://127.0.0.1:2000` by default):
 
 ```bash title="Terminal"
 cd sanity
