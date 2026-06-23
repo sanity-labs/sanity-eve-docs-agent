@@ -5,9 +5,10 @@ article, the agent reads the article, composes a clarifying fix and stages it as
 (never published), and posts an actionable Slack notice. An editor reviews the draft in Sanity
 Studio and publishes. A weekly sweep catches anything the event trigger missed.
 
-Built on [eve](https://eve.dev) (durable runtime). eve's own model does the reasoning; the
-write is a deterministic [`@sanity/client`](https://www.sanity.io/docs/js-client) document
-action against the exact article, so the right doc gets the edit, every time.
+Built on [eve](https://eve.dev) (durable runtime). eve orchestrates the workflow and decides the
+fix; the write is a schema-aware Sanity [Agent Action](https://www.sanity.io/docs/agent-actions/transform-quickstart)
+that revises the article's draft in place, so the right document gets the edit and a human
+approves it in Studio.
 
 ## How it works
 
@@ -166,7 +167,7 @@ eve's [auth & route protection](https://eve.dev/docs/guides/auth-and-route-prote
 ## Slack
 
 In production the agent posts through a Slack app that **Vercel Connect** provisions and
-installs for you, so there's no webhook URL or bot token to manage. Create the connector once,
+installs for you, so there are no Slack secrets to manage. Create the connector once,
 then set its UID and a target channel:
 
 ```bash
@@ -179,8 +180,8 @@ vercel connect create slack            # walks through installing the Slack app
 
 `post_to_slack` requests an app-scoped bot token from Connect at runtime and calls
 `chat.postMessage`. For **local dev**, Connect needs the project's Vercel OIDC identity, which
-`eve dev` doesn't have, so set `SLACK_WEBHOOK_URL` in `.env.local` instead: if it's present the
-tool uses the webhook and skips Connect. Leave it blank in production.
+`eve dev` doesn't have, so set `SLACK_WEBHOOK_URL` in `.env.local` and the tool posts through the
+webhook for local runs. Leave it blank in production.
 
 ## Extend
 
@@ -188,8 +189,8 @@ tool uses the webhook and skips Connect. Leave it blank in production.
   references (`*[references($id)]`), then keyword `score()`/`text::match`, then
   [Sanity Context](https://www.sanity.io/docs/ai/sanity-context) for schema-aware semantic
   search. See the comment in `tools/read_article.ts`.
-- **Batch review (Enterprise):** stage fixes into a Content Release instead of drafts, so a
-  week of fixes lands in one reviewable release.
+- **Batch review (Enterprise):** stage fixes into a Content Release so a week of fixes lands in
+  one reviewable release.
 - **More checks:** broaden the agent's policy (broken links, missing alt text, SEO).
 - **More surfaces:** add other eve channels (Discord, Linear) for notices.
 - **Conversational Slack:** the agent posts notices but doesn't listen. To also answer

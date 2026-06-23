@@ -1,7 +1,7 @@
 import { createClient, type SanityClient } from "@sanity/client";
 
-// One place to configure Sanity access. The Editor token both reads content and writes
-// drafts; the document Actions API (used to stage drafts) needs a recent apiVersion.
+// One place to configure Sanity access. The Editor token reads content and writes feedback
+// status updates. (stage_article_edit overrides apiVersion to "vX" for its Agent Action.)
 export function sanityClient(): SanityClient {
   return createClient({
     projectId: process.env.SANITY_STUDIO_PROJECT_ID!,

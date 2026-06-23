@@ -9,8 +9,8 @@ This pattern adapts to other content operations too. You can apply it anywhere a
 - Node.js 22 or newer.
 - A [Sanity](https://www.sanity.io) project with a deployed Studio, an `article` type (with a Portable Text body) and a `feedback` type (shape below).
 - A Sanity API token with the **Editor** role: it reads content and writes drafts.
-- A Slack workspace where you can install an app. You don't need a webhook: Vercel Connect
-  installs the Slack app for you at deploy (step 7). An incoming webhook still works for local dev.
+- A Slack workspace where you can install an app. Vercel Connect sets up the Slack app for you
+  at deploy (step 7); for local development you can use an incoming webhook.
 - A model credential for eve: an `AI_GATEWAY_API_KEY`, or run `npx eve link`.
 
 ## How it works
@@ -90,7 +90,7 @@ SANITY_SCHEMA_ID=sanity.workspace.schema.default       # from `npx sanity schema
 SANITY_STUDIO_URL=https://your-studio.sanity.studio   # optional, for the review button
 SLACK_CONNECTOR=slack/your-agent                       # Slack app via Vercel Connect (set up in step 7)
 SLACK_CHANNEL=C0123456789                              # channel to post to (invite the app to it)
-# SLACK_WEBHOOK_URL=                                   # optional local-dev fallback (wins if set)
+# SLACK_WEBHOOK_URL=                                   # for local dev (eve dev has no Connect/OIDC)
 AI_GATEWAY_API_KEY=your-gateway-key                    # or run `npx eve link`
 EVE_TRIGGER_SECRET=a-long-random-string                # the Function authenticates with this
 ```
@@ -107,7 +107,7 @@ This opens the eve dev TUI. Create a `feedback` document in Studio that referenc
 
 > New reader feedback to handle. Feedback document _id: "&lt;feedback-id&gt;".
 
-You'll see the agent call `read_feedback`, `read_article`, `stage_article_edit`, `mark_feedback_handled`, then `post_to_slack`. Open the draft from the Slack button to review it. For local runs, set `SLACK_WEBHOOK_URL` in `.env.local`: Connect needs the project's Vercel OIDC identity, which `eve dev` doesn't have, so the tool falls back to the webhook when it's set. To exercise the real trigger path on your machine, use Sanity's local function testing, pointing `EVE_AGENT_URL` at the address `eve dev` printed on boot (`http://127.0.0.1:2000` by default):
+You'll see the agent call `read_feedback`, `read_article`, `stage_article_edit`, `mark_feedback_handled`, then `post_to_slack`. Open the draft from the Slack button to review it. For local runs, Connect needs the project's Vercel OIDC identity, which `eve dev` doesn't have, so set `SLACK_WEBHOOK_URL` in `.env.local` and the tool posts through the webhook. To exercise the real trigger path on your machine, use Sanity's local function testing, pointing `EVE_AGENT_URL` at the address `eve dev` printed on boot (`http://127.0.0.1:2000` by default):
 
 ```bash title="Terminal"
 cd sanity
@@ -157,7 +157,7 @@ export default eveChannel({
 });
 ```
 
-Then set up Slack with **Vercel Connect** instead of a webhook. Connect installs the Slack app in your workspace and brokers the bot token at runtime, so there's nothing to copy and paste:
+Then set up Slack with **Vercel Connect**. Connect installs the Slack app in your workspace and brokers the bot token at runtime, so there's nothing to copy and paste:
 
 ```bash title="Terminal"
 export FF_CONNECT_ENABLED=1
@@ -183,7 +183,7 @@ New feedback now fires the agent. If a trigger is rejected (wrong secret, agent 
 
 - **Richer context.** Let the agent reason over related content, cheapest first: GROQ references (`*[references($id)]`), then keyword ranking with `score()` and `text::match`, then [Sanity Context](https://www.sanity.io/docs/ai/sanity-context) for schema-aware semantic search. See the comment in `agent/tools/read_article.ts`.
 - **Fact-checking.** Delete `agent/tools/web_search.ts` to let the agent verify claims on the web before drafting. It's off by default so unverified facts don't land in your docs.
-- **Batch review.** On an Enterprise plan, stage fixes into a [Content Release](https://www.sanity.io/docs/content-releases) instead of drafts, so a week of fixes reviews as one set.
+- **Batch review.** On an Enterprise plan, stage fixes into a [Content Release](https://www.sanity.io/docs/content-releases) so a week of fixes reviews as one set.
 - **More surfaces.** Add other eve channels (Discord, Linear) for notices, or adopt eve's conversational `slackChannel` (same Connect connector) for interactive buttons and threaded replies.
 
 ## Related resources

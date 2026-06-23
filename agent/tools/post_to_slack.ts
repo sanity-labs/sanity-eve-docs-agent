@@ -60,8 +60,9 @@ export default defineTool({
     // `text` is the notification/accessibility fallback for the rich blocks.
     const text = `Docs fix ready to review: ${articleTitle}`;
 
-    // Local-dev fallback: an incoming webhook works in `eve dev` with no Vercel Connect / OIDC.
-    // If it's set, use it. (The template's default is the Connect path below.)
+    // For local development, set SLACK_WEBHOOK_URL: `eve dev` has no Vercel OIDC for Connect, so
+    // the tool posts via the webhook when it's present. In production it's unset, and Connect
+    // (below) brokers the Slack app's token.
     const webhook = process.env.SLACK_WEBHOOK_URL;
     if (webhook) {
       const res = await fetch(webhook, {
