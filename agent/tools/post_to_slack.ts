@@ -1,5 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
+import { getToken } from "@vercel/connect";
 
 const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -17,11 +18,6 @@ export default defineTool({
       .describe("URL that opens the draft in Studio (from stage_article_edit)"),
   }),
   async execute({ articleTitle, feedback, summary, reviewUrl }) {
-    const url = process.env.SLACK_WEBHOOK_URL;
-    if (!url) {
-      throw new Error("SLACK_WEBHOOK_URL is not set. See .env.example.");
-    }
-
     const blocks: Array<Record<string, unknown>> = [
       {
         type: "header",
@@ -39,7 +35,6 @@ export default defineTool({
         text: { type: "mrkdwn", text: `*What the agent changed*\n${truncate(summary, 600)}` },
       },
     ];
-
     if (reviewUrl) {
       blocks.push({
         type: "actions",
@@ -53,7 +48,6 @@ export default defineTool({
         ],
       });
     }
-
     blocks.push({
       type: "context",
       elements: [
@@ -63,16 +57,46 @@ export default defineTool({
         },
       ],
     });
+    // `text` is the notification/accessibility fallback for the rich blocks.
+    const text = `Docs fix ready to review: ${articleTitle}`;
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      // `text` is the notification/accessibility fallback for the rich blocks.
-      body: JSON.stringify({ text: `Docs fix ready to review: ${articleTitle}`, blocks }),
-    });
-    if (!res.ok) {
-      throw new Error(`Slack webhook failed: ${res.status} ${await res.text()}`);
+    // Local-dev fallback: an incoming webhook works in `eve dev` with no Vercel Connect / OIDC.
+    // If it's set, use it. (The template's default is the Connect path below.)
+    const webhook = process.env.SLACK_WEBHOOK_URL;
+    if (webhook) {
+      const res = await fetch(webhook, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text, blocks }),
+      });
+      if (!res.ok) throw new Error(`Slack webhook failed: ${res.status} ${await res.text()}`);
+      return { posted: true, via: "webhook" };
     }
-    return { posted: true };
+
+    // Default: post via the Slack app that Vercel Connect provisions at deploy
+    // (`vercel connect create slack`). Connect brokers an app-scoped bot token at runtime,
+    // so there's no webhook URL or bot token to manage. Needs a target channel.
+    const connector = process.env.SLACK_CONNECTOR;
+    const channel = process.env.SLACK_CHANNEL;
+    if (!connector || !channel) {
+      throw new Error(
+        "Set SLACK_CONNECTOR and SLACK_CHANNEL (or SLACK_WEBHOOK_URL for local dev). See .env.example.",
+      );
+    }
+    const botToken = await getToken(connector, { subject: { type: "app" } });
+    const res = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        authorization: `Bearer ${botToken}`,
+      },
+      body: JSON.stringify({ channel, text, blocks }),
+    });
+    // Slack returns HTTP 200 with `{ ok: false, error }` on failure, so check the body.
+    const body = (await res.json()) as { ok: boolean; error?: string };
+    if (!body.ok) {
+      throw new Error(`Slack chat.postMessage failed: ${body.error ?? res.status}`);
+    }
+    return { posted: true, via: "connect" };
   },
 });

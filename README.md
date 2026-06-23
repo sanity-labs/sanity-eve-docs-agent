@@ -107,9 +107,10 @@ sanity/
 ## Setup
 
 1. `cp .env.example .env.local` and fill it in. You need a project **Editor** token (reads
-   content, writes drafts), your project ID + dataset, a Slack incoming webhook, and a model
-   credential (`AI_GATEWAY_API_KEY` or `npx eve link`). Optionally set `SANITY_STUDIO_URL`
-   for the "Review draft in Studio" button.
+   content, writes drafts), your project ID + dataset, Slack (a Vercel Connect connector for
+   production, or a webhook for local dev; see [Slack](#slack)), and a model credential
+   (`AI_GATEWAY_API_KEY` or `npx eve link`). Optionally set `SANITY_STUDIO_URL` for the
+   "Review draft in Studio" button.
 2. `npm install`
 3. Create a **`feedback` document** in Studio referencing an article (or seed one however you
    like), then `npm run dev` (the eve dev TUI) and give the agent its `_id`:
@@ -161,6 +162,25 @@ ships a `triggerSecret()` verifier that accepts `Authorization: Bearer ${EVE_TRI
 and falls through to `localDev()` / `vercelOidc()`, so unauthenticated callers get 401. See
 eve's [auth & route protection](https://eve.dev/docs/guides/auth-and-route-protection) guide.
 
+## Slack
+
+In production the agent posts through a Slack app that **Vercel Connect** provisions and
+installs for you, so there's no webhook URL or bot token to manage. Create the connector once,
+then set its UID and a target channel:
+
+```bash
+npm i -g vercel@latest && export FF_CONNECT_ENABLED=1
+vercel connect create slack            # walks through installing the Slack app
+# set on the Vercel project:
+#   SLACK_CONNECTOR = the connector UID it prints (e.g. slack/my-agent)
+#   SLACK_CHANNEL   = the channel id to post to (invite the app to that channel)
+```
+
+`post_to_slack` requests an app-scoped bot token from Connect at runtime and calls
+`chat.postMessage`. For **local dev**, Connect needs the project's Vercel OIDC identity, which
+`eve dev` doesn't have, so set `SLACK_WEBHOOK_URL` in `.env.local` instead: if it's present the
+tool uses the webhook and skips Connect. Leave it blank in production.
+
 ## Extend
 
 - **Richer context:** give the agent related content to reason over. Cheapest first: GROQ
@@ -171,6 +191,6 @@ eve's [auth & route protection](https://eve.dev/docs/guides/auth-and-route-prote
   week of fixes lands in one reviewable release.
 - **More checks:** broaden the agent's policy (broken links, missing alt text, SEO).
 - **More surfaces:** add other eve channels (Discord, Linear) for notices.
-- **Slack app instead of a webhook:** the template posts via an incoming webhook (no install,
-  no OAuth). A full Slack app adds interactive buttons and drops the "external link" warning
-  Slack shows on webhook buttons. Worth it for a team-wide rollout, overkill to start.
+- **Conversational Slack:** the agent posts notices but doesn't listen. To also answer
+  `@mentions` and DMs, add eve's [`slackChannel`](https://eve.dev/docs/channels/slack) (it
+  reuses the same Connect connector). That turns the notifier into a two-way assistant.
