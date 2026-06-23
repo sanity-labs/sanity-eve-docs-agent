@@ -18,17 +18,18 @@ Reader leaves feedback
 eve agent ─────────────────────────────────────────────────┘
    ├─ read_feedback         → the reader's comment (untrusted) + has it been handled?
    ├─ read_article          → fetch the article body (plain GROQ, no AI credits)
-   ├─ stage_article_edit    → insert the agent's note into the article's DRAFT (edit action)
+   ├─ stage_article_edit    → revise the article's DRAFT via a schema-aware Agent Action
    ├─ mark_feedback_handled → record the outcome on the feedback (idempotency + trail)
    ├─ find_recent_feedback  → GROQ list of unhandled feedback (cron sweep)
    └─ post_to_slack         → "Doc X got feedback; draft ready to review"
 Editor opens the draft in Studio → approves & publishes   (human-in-the-loop)
 ```
 
-The agent writes to **drafts only** (via the Sanity document Actions API, which creates the
-draft from the published version), so the editor's review is the approval gate. No content is
-ever published without a human. Each feedback item is marked handled when done, so retries and
-the weekly sweep never double-process it.
+The agent writes to **drafts only**, via a schema-aware Sanity [Agent Action](https://www.sanity.io/docs/agent-actions/transform-quickstart)
+(`transform`). Agent Actions never mutate a published document by default: pass the published
+`_id` and the edit lands on the draft (created from the published version if needed). The
+editor's review is the approval gate. Each feedback item is marked handled when done, so retries
+and the weekly sweep never double-process it.
 
 ## Security model
 
@@ -92,7 +93,7 @@ agent/
   lib/sanity.ts                  # shared @sanity/client factory (one place to configure)
   tools/read_feedback.ts         # read a feedback doc (comment is untrusted; handledAt guard)
   tools/read_article.ts          # GROQ read of the article body (no AI credits)
-  tools/stage_article_edit.ts    # stage the fix as a draft (Sanity edit action)
+  tools/stage_article_edit.ts    # stage the fix as a draft (Sanity Agent Action: transform)
   tools/mark_feedback_handled.ts # record outcome on the feedback (idempotency + trail)
   tools/find_recent_feedback.ts  # GROQ read of unhandled feedback (no AI credits)
   tools/post_to_slack.ts         # actionable Slack notice (incoming webhook)
@@ -106,10 +107,11 @@ sanity/
 ## Setup
 
 1. `cp .env.example .env.local` and fill it in. You need a project **Editor** token (reads
-   content, writes drafts), your project ID + dataset, Slack (a Vercel Connect connector for
-   production, or a webhook for local dev; see [Slack](#slack)), and a model credential
-   (`AI_GATEWAY_API_KEY` or `npx eve link`). Optionally set `SANITY_STUDIO_URL` for the
-   "Review draft in Studio" button.
+   content, writes drafts), your project ID + dataset, your deployed **schema id**
+   (`SANITY_SCHEMA_ID`, from `npx sanity schema list` — Agent Actions need it), Slack (a Vercel
+   Connect connector for production, or a webhook for local dev; see [Slack](#slack)), and a
+   model credential (`AI_GATEWAY_API_KEY` or `npx eve link`). Optionally set `SANITY_STUDIO_URL`
+   for the "Review draft in Studio" button.
 2. `npm install`
 3. Create a **`feedback` document** in Studio referencing an article (or seed one however you
    like), then `npm run dev` (the eve dev TUI) and give the agent its `_id`:

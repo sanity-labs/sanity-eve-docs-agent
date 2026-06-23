@@ -72,7 +72,7 @@ defineType({
 })
 ```
 
-Deploy the Studio so the schema is live: `npx sanity deploy`.
+Deploy the Studio so the schema is live: `npx sanity deploy`. Agent Actions (step 5) run against the deployed schema, so grab its id with `npx sanity schema list` for `SANITY_SCHEMA_ID` in the next step.
 
 ### 3. Configure environment variables
 
@@ -86,6 +86,7 @@ cp .env.example .env.local
 SANITY_STUDIO_PROJECT_ID=your-project-id
 SANITY_STUDIO_DATASET=production
 SANITY_API_WRITE_TOKEN=your-editor-token
+SANITY_SCHEMA_ID=sanity.workspace.schema.default       # from `npx sanity schema list` (for Agent Actions)
 SANITY_STUDIO_URL=https://your-studio.sanity.studio   # optional, for the review button
 SLACK_CONNECTOR=slack/your-agent                       # Slack app via Vercel Connect (set up in step 7)
 SLACK_CHANNEL=C0123456789                              # channel to post to (invite the app to it)
@@ -114,20 +115,20 @@ EVE_AGENT_URL=http://127.0.0.1:2000 npx sanity@latest functions test on-feedback
   --document-id <a feedback _id> --project-id <projectId> --dataset <dataset>
 ```
 
-### 5. The write is deterministic, not free-form
+### 5. The write is a schema-aware Agent Action, scoped to the draft
 
-The model decides *what* to add. The tool decides *how* it's written. `stage_article_edit` takes the paragraph the agent composed and applies it with a single document action, against the exact article, as its draft:
+The agent doesn't hand-write Portable Text. It composes a precise instruction, and `stage_article_edit` runs a Sanity [Agent Action](https://www.sanity.io/docs/agent-actions/transform-quickstart) (`transform`) that revises the article's body for it. Agent Actions are schema-aware, so the edit is valid content in the right place, and by default they **never mutate a published document**: pass the published `_id` and the action writes to the draft (creating it from the published version, or reusing an existing draft).
 
 ```ts title="agent/tools/stage_article_edit.ts"
-await client.action({
-  actionType: "sanity.action.document.edit",
-  draftId: `drafts.${articleId}`,
-  publishedId: articleId, // creates the draft from the published version if needed
-  patch: { insert: { before: "content[0]", items: [block] } },
+await client.withConfig({ apiVersion: "vX" }).agent.action.transform({
+  schemaId: process.env.SANITY_SCHEMA_ID, // from `npx sanity schema list`
+  documentId: articleId,                  // published id → writes to the draft, never publishes
+  instruction,                            // the scoped instruction the agent composed
+  target: [{ path: "content" }],          // only the article body, not title/slug
 });
 ```
 
-The right document gets the edit every time, and the change lands as a draft for a human to review. There's no path for the model to write to the wrong place or publish on its own.
+The exact document gets the edit, the change lands as a draft for a human to review, and the model can't write to the wrong place or publish on its own. Agent Actions are an experimental API (`apiVersion: "vX"`, subject to change), so pin it and watch the changelog.
 
 ### 6. Lock the agent down
 
