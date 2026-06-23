@@ -2,7 +2,7 @@
 
 Reader feedback on documentation piles up faster than anyone triages it. Someone flags that a page is missing a step, the note lands in a queue, and weeks later the page still has the gap. This guide builds an agent that closes that loop: when a reader leaves feedback on a docs article, the agent reads the article, drafts a fix, stages it as a draft (never published), and posts a Slack notice with a button to review it in Sanity Studio. It runs on [eve](https://eve.dev), Vercel's durable agent runtime, triggered by a [Sanity Function](https://www.sanity.io/docs/functions) on every new feedback and a weekly cron as a backstop. A human always approves before anything goes live.
 
-This pattern adapts to other content operations too: anywhere an agent can react to a trigger and stage a content update for review (broken-link sweeps, freshness audits, metadata backfills).
+This pattern adapts to other content operations too. You can apply it anywhere an agent reacts to a trigger and stages a content update for review (broken-link sweeps, freshness audits, metadata backfills).
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ eve agent ───────────────────────�
 Editor reviews the draft in Studio → publishes
 ```
 
-The agent never publishes. It stages every change as a draft through the Sanity document Actions API, so the editor's review is the approval gate. Each feedback item is marked handled when it's done, so a Function retry or the weekly sweep never processes it twice. eve gives you the parts a plain script can't: durable runs, the Function and cron triggers, the Slack channel, and one-command deploy to Vercel. From here you can extend it toward broader content audits.
+The agent runs on event triggers and on a schedule. It stages every change as a draft via a schema-aware Sanity Agent Action, so an editor reviews and publishes; nothing goes live without a human. Each feedback item is marked handled when it's done, so a Function retry or the weekly sweep never processes it twice. Sanity handles the content and triggers the agent when feedback comes in; eve handles the durable runs, orchestrating notices to Slack (or any other connection) and which tools the agent can use. From here you can extend it toward broader content audits.
 
 ## Steps
 
