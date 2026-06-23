@@ -76,7 +76,7 @@ defineType({
 })
 ```
 
-Deploy the Studio so the schema is live: `npx sanity deploy`. Agent Actions (step 5) run against the deployed schema, so grab its id with `npx sanity schema list` for `SANITY_SCHEMA_ID` in the next step.
+Deploy the Studio so the schema is live: `npx sanity deploy`. Two things from this for the next step: grab the schema id with `npx sanity schema list` (`SANITY_SCHEMA_ID`, for Agent Actions), and note the Studio app id `sanity deploy` writes into `sanity.cli.ts` (`SANITY_STUDIO_APP_ID`, for the review-button link).
 
 ### 3. Configure environment variables
 
@@ -91,7 +91,8 @@ SANITY_STUDIO_PROJECT_ID=your-project-id
 SANITY_STUDIO_DATASET=production
 SANITY_API_WRITE_TOKEN=your-editor-token
 SANITY_SCHEMA_ID=sanity.workspace.schema.default       # from `npx sanity schema list` (for Agent Actions)
-SANITY_STUDIO_URL=https://www.sanity.io/@org/studio/appId/workspace  # optional review button (dashboard URL, or a custom domain)
+SANITY_ORG_ID=oSyH1iET5                                # review button: org id + app id (both in sanity.cli.ts)
+SANITY_STUDIO_APP_ID=your-studio-app-id                # the studio app id, added on `sanity deploy`
 SLACK_CONNECTOR=slack/your-agent                       # Slack app via Vercel Connect (set up in step 7)
 SLACK_CHANNEL=C0123456789                              # channel to post to (invite the app to it)
 # SLACK_WEBHOOK_URL=                                   # for local dev (eve dev has no Connect/OIDC)

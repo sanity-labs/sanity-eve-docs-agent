@@ -2,6 +2,22 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { sanityClient } from "../lib/sanity.js";
 
+// Build the "Review draft in Studio" deep link. For a Sanity dashboard Studio, construct it from
+// the org id + app id (both written into your Studio's sanity.cli.ts on `sanity deploy`); the
+// workspace defaults to "default". SANITY_STUDIO_URL overrides with an explicit base (e.g. a
+// custom-domain Studio). The Slack notice omits the button when none of these are set.
+function reviewUrlFor(id: string, type: string): string | undefined {
+  const override = process.env.SANITY_STUDIO_URL?.replace(/\/$/, "");
+  const org = process.env.SANITY_ORG_ID;
+  const appId = process.env.SANITY_STUDIO_APP_ID;
+  const base =
+    override ??
+    (org && appId
+      ? `https://www.sanity.io/@${org}/studio/${appId}/${process.env.SANITY_STUDIO_WORKSPACE ?? "default"}`
+      : undefined);
+  return base ? `${base}/intent/edit/id=${id};type=${type}` : undefined;
+}
+
 // Stage a fix as a DRAFT via a Sanity Agent Action (transform). Agent Actions are schema-aware
 // and, by default, never mutate a published document: passing the published _id creates (or
 // reuses) the draft and writes there, so the editor's review in Studio stays the publish gate.
@@ -39,17 +55,10 @@ export default defineTool({
       target: [{ path: "content" }], // only touch the article body, not title/slug/etc.
     })) as { _id?: string; _type?: string; title?: string };
 
-    // The "Review draft in Studio" button. Set SANITY_STUDIO_URL to your deployed Studio;
-    // if it's unset the Slack notice just omits the button.
-    const studioUrl = process.env.SANITY_STUDIO_URL?.replace(/\/$/, "");
-    const reviewUrl = studioUrl
-      ? `${studioUrl}/intent/edit/id=${articleId};type=${result._type ?? "article"}`
-      : undefined;
-
     return {
       draftId: result._id ?? `drafts.${articleId}`,
       articleTitle: result.title ?? articleId,
-      reviewUrl,
+      reviewUrl: reviewUrlFor(articleId, result._type ?? "article"),
     };
   },
 });

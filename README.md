@@ -111,8 +111,8 @@ sanity/
    content, writes drafts), your project ID + dataset, your deployed **schema id**
    (`SANITY_SCHEMA_ID`, from `npx sanity schema list`, which Agent Actions need), Slack (a Vercel
    Connect connector for production, or a webhook for local dev; see [Slack](#slack)), and a
-   model credential (`AI_GATEWAY_API_KEY` or `npx eve link`). Optionally set `SANITY_STUDIO_URL`
-   for the "Review draft in Studio" button.
+   model credential (`AI_GATEWAY_API_KEY` or `npx eve link`). For the "Review draft in Studio"
+   button, set `SANITY_ORG_ID` + `SANITY_STUDIO_APP_ID` (both in your Studio's `sanity.cli.ts`).
 2. `npm install`
 3. Create a **`feedback` document** in Studio referencing an article (or seed one however you
    like), then `npm run dev` (the eve dev TUI) and give the agent its `_id`:
