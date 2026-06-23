@@ -72,14 +72,13 @@ defineType({
   name: "feedback",
   type: "document",
   fields: [
-    defineField({ name: "article", type: "reference", to: [{ type: "article" }] }),
+    defineField({ name: "article", type: "reference", to: [{ type: "article" }], weak: true }),
     defineField({ name: "comment", type: "text" }),
     defineField({ name: "rating", type: "number" }),         // optional
-    // ── written by the agent (you don't author these in the form) ──
-    defineField({ name: "handledAt", type: "datetime" }),    // set = handled
-    defineField({ name: "outcome", type: "string" }),        // "edited" | "skipped"
-    defineField({ name: "outcomeNote", type: "string" }),    // why, when skipped
-    defineField({ name: "draftId", type: "string" }),        // the staged draft, when edited
+    // ── written by the agent (readOnly in the form; the API token still writes them) ──
+    defineField({ name: "handledAt", type: "datetime", readOnly: true }),    // set = handled
+    defineField({ name: "outcome", type: "string", readOnly: true }),        // "edited" | "skipped"
+    defineField({ name: "outcomeNote", type: "string", readOnly: true }),    // why, when skipped
   ],
 })
 ```

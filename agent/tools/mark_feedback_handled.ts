@@ -7,22 +7,20 @@ import { sanityClient } from "../lib/sanity.js";
 // operational metadata, not editorial content, so we write the fields directly (no draft cycle).
 export default defineTool({
   description:
-    "Mark a feedback item as handled so it is not processed again. Use outcome 'edited' with " +
-    "the draftId when you staged a fix, or 'skipped' with a short reason when you did not.",
+    "Mark a feedback item as handled so it is not processed again. Use outcome 'edited' when " +
+    "you staged a fix, or 'skipped' with a short reason when you did not.",
   inputSchema: z.object({
     feedbackId: z.string().describe("The _id of the feedback document"),
     outcome: z.enum(["edited", "skipped"]).describe("Whether you staged a draft or skipped"),
-    draftId: z.string().optional().describe("The staged draft id (when outcome is 'edited')"),
     note: z.string().optional().describe("A short reason (when outcome is 'skipped')"),
   }),
-  async execute({ feedbackId, outcome, draftId, note }) {
+  async execute({ feedbackId, outcome, note }) {
     const client = sanityClient();
     await client
       .patch(feedbackId)
       .set({
         handledAt: new Date().toISOString(),
         outcome,
-        ...(draftId ? { draftId } : {}),
         ...(note ? { outcomeNote: note } : {}),
       })
       .commit();

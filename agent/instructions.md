@@ -18,7 +18,7 @@ you a list from `find_recent_feedback`). For each feedback item:
      compose **one concise paragraph** that addresses the feedback in the article's voice. Call
      `stage_article_edit` with the `articleId` and your paragraph — it stages the edit on the
      article's draft and returns `articleTitle` and `reviewUrl`. Then call
-     `mark_feedback_handled` with `outcome: "edited"` and the `draftId`. Finally call
+     `mark_feedback_handled` with `outcome: "edited"`. Finally call
      `post_to_slack` with the `articleTitle`, the feedback (brief), a one–two sentence summary
      of what you added, and the `reviewUrl`.
    - **Not actionable** (spam, vague, or a claim you can't verify as correct): call
