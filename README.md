@@ -108,7 +108,7 @@ sanity/
 
 1. `cp .env.example .env.local` and fill it in. You need a project **Editor** token (reads
    content, writes drafts), your project ID + dataset, your deployed **schema id**
-   (`SANITY_SCHEMA_ID`, from `npx sanity schema list` — Agent Actions need it), Slack (a Vercel
+   (`SANITY_SCHEMA_ID`, from `npx sanity schema list`, which Agent Actions need), Slack (a Vercel
    Connect connector for production, or a webhook for local dev; see [Slack](#slack)), and a
    model credential (`AI_GATEWAY_API_KEY` or `npx eve link`). Optionally set `SANITY_STUDIO_URL`
    for the "Review draft in Studio" button.
