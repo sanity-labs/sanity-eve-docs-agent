@@ -2,9 +2,11 @@
 
 Reader feedback on documentation piles up faster than anyone triages it. Someone flags that a page is missing a step, the note lands in a queue, and weeks later the page still has the gap. This guide builds an agent that closes that loop: when a reader leaves feedback on a docs article, the agent reads the article, drafts a fix, stages it as a draft (never published), and posts a Slack notice with a button to review it in Sanity Studio. It runs on [eve](https://eve.dev), Vercel's durable agent runtime, triggered by a [Sanity Function](https://www.sanity.io/docs/functions) on every new feedback and a weekly cron as a backstop. A human always approves before anything goes live.
 
+This pattern adapts to other content operations too: anywhere an agent can react to a trigger and stage a content update for review (broken-link sweeps, freshness audits, metadata backfills).
+
 ## Prerequisites
 
-- Node.js 20 or newer.
+- Node.js 22 or newer.
 - A [Sanity](https://www.sanity.io) project with a deployed Studio, an `article` type (with a Portable Text body) and a `feedback` type (shape below).
 - A Sanity API token with the **Editor** role: it reads content and writes drafts.
 - A Slack workspace where you can install an app. You don't need a webhook: Vercel Connect
@@ -23,7 +25,7 @@ eve agent ───────────────────────�
 Editor reviews the draft in Studio → publishes
 ```
 
-The agent never publishes. It stages every change as a draft through the Sanity document Actions API, so the editor's review is the approval gate. Each feedback item is marked handled when it's done, so a Function retry or the weekly sweep never processes it twice. eve gives you the parts a plain script can't: durable runs, the Function and cron triggers, the Slack channel, and one-command deploy to Vercel.
+The agent never publishes. It stages every change as a draft through the Sanity document Actions API, so the editor's review is the approval gate. Each feedback item is marked handled when it's done, so a Function retry or the weekly sweep never processes it twice. eve gives you the parts a plain script can't: durable runs, the Function and cron triggers, the Slack channel, and one-command deploy to Vercel. From here you can extend it toward broader content audits.
 
 ## Steps
 
@@ -36,6 +38,8 @@ npm install
 ```
 
 The repo is a complete eve agent: tools in `agent/tools/`, the operating policy in `agent/instructions.md`, the model in `agent/agent.ts`, the Slack channel and auth in `agent/channels/eve.ts`, and the Sanity Function trigger under `sanity/`.
+
+This guide assumes you have an existing Sanity project. If you don't and want to try it anyway, install the [Sanity MCP](https://www.sanity.io/docs/ai/mcp-server) in your agent harness, point it at this guide, and ask it to create a project with the content model below plus some example documentation.
 
 ### 2. Add the content model
 
@@ -57,7 +61,7 @@ defineType({
   name: "feedback",
   type: "document",
   fields: [
-    defineField({ name: "article", type: "reference", to: [{ type: "article" }] }),
+    defineField({ name: "article", type: "reference", to: [{ type: "article" }], weak: true }),
     defineField({ name: "comment", type: "text" }),
     defineField({ name: "rating", type: "number" }),      // optional
     // Written by the agent. You don't author these in the form:
@@ -72,6 +76,8 @@ defineType({
 Deploy the Studio so the schema is live: `npx sanity deploy`.
 
 ### 3. Configure environment variables
+
+With a project in place, point the agent at it:
 
 ```bash
 cp .env.example .env.local
@@ -178,7 +184,7 @@ New feedback now fires the agent. If a trigger is rejected (wrong secret, agent 
 - **Richer context.** Let the agent reason over related content, cheapest first: GROQ references (`*[references($id)]`), then keyword ranking with `score()` and `text::match`, then [Sanity Context](https://www.sanity.io/docs/ai/sanity-context) for schema-aware semantic search. See the comment in `agent/tools/read_article.ts`.
 - **Fact-checking.** Delete `agent/tools/web_search.ts` to let the agent verify claims on the web before drafting. It's off by default so unverified facts don't land in your docs.
 - **Batch review.** On an Enterprise plan, stage fixes into a [Content Release](https://www.sanity.io/docs/content-releases) instead of drafts, so a week of fixes reviews as one set.
-- **More surfaces.** Add other eve channels (Discord, Linear) for notices, or swap the incoming webhook for a full Slack app to get interactive buttons.
+- **More surfaces.** Add other eve channels (Discord, Linear) for notices, or adopt eve's conversational `slackChannel` (same Connect connector) for interactive buttons and threaded replies.
 
 ## Related resources
 
