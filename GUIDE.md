@@ -17,11 +17,15 @@ This pattern adapts to other content operations too. You can apply it anywhere a
 
 ```
 Reader leaves feedback
+   │
    │  Sanity Function (on create) → passes the feedback _id      eve cron (weekly)
-   ▼                                                                   │
-eve agent ───────────────────────────────────────────────────────────┘
+   │                                                                 │
+   ▼                                                                 │
+   eve agent ◀︎───────────────────────────────────────────────────────┘
    read_feedback → read_article → stage_article_edit (DRAFT) →
    mark_feedback_handled → post_to_slack
+   │
+   ▼
 Editor reviews the draft in Studio → publishes
 ```
 
@@ -87,7 +91,7 @@ SANITY_STUDIO_PROJECT_ID=your-project-id
 SANITY_STUDIO_DATASET=production
 SANITY_API_WRITE_TOKEN=your-editor-token
 SANITY_SCHEMA_ID=sanity.workspace.schema.default       # from `npx sanity schema list` (for Agent Actions)
-SANITY_STUDIO_URL=https://your-studio.sanity.studio   # optional, for the review button
+SANITY_STUDIO_URL=https://www.sanity.io/@org/studio/appId/workspace  # optional review button (dashboard URL, or a custom domain)
 SLACK_CONNECTOR=slack/your-agent                       # Slack app via Vercel Connect (set up in step 7)
 SLACK_CHANNEL=C0123456789                              # channel to post to (invite the app to it)
 # SLACK_WEBHOOK_URL=                                   # for local dev (eve dev has no Connect/OIDC)
